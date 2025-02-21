@@ -22,6 +22,7 @@ public class BufMgr implements GlobalConst{
   public BufMgr(int numbufs, String replacerArg) {
 
     //YOUR CODE HERE
+    //test
 
   }
 
