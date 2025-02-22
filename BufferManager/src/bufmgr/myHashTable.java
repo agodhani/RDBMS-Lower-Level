@@ -1,3 +1,4 @@
+package bufmgr;
 import java.util.LinkedList;
 import global.*;
 
@@ -6,23 +7,12 @@ public class myHashTable {
     private static final int HTSIZE = 101;
     private LinkedList<HashEntry>[] table;
 
-    private static class HashEntry() {
-        PageId pageId;
-        int frameNumber;
-
-        HashEntry(PageId pageId, int frameNumber) {
-            this.pageId = pageId;
-            this.frameNumber = frameNumber;
-        }
-    }
-    
     public myHashTable() {
         table = new LinkedList[HTSIZE];
         for (int i = 0; i < HTSIZE; i++) {
             table[i] = new LinkedList<>();
         }
     }
-
 
     private int hash(PageId pageId) {
         int a = 3, b = 7;  // Arbitrary constants for hashing
@@ -54,7 +44,7 @@ public class myHashTable {
     public void remove(PageId page) {
         int index = hash(page);
         for (HashEntry entry : table[index]) {
-            if (entry.pageId.pid = page.pid) {
+            if (entry.pageId.pid == page.pid) {
                 table[index].remove();
             }
         }
