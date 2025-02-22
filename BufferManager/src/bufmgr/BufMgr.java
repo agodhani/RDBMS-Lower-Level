@@ -160,5 +160,14 @@ public class BufMgr implements GlobalConst{
     //YOUR CODE HERE
   }
 
+  public int freeFrame() {
+    for (int i = 0; i < frameDesc.length; i++) {
+      if (frameDesc[i].getPageId().pid == -1) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
 }
 
