@@ -23,6 +23,8 @@ public class BufMgr implements GlobalConst{
   private FrameDesc[] frameDesc;
   private int numBuffers;
   private String replacerArg;  
+  private myHashTable hashTable;
+  private LinkedList<Integer> fifoQueue;
 
   public BufMgr(int numbufs, String replacerArg) {
     //initialize the buffer pool
@@ -30,6 +32,8 @@ public class BufMgr implements GlobalConst{
     this.frameDesc = new FrameDesc[numbufs];
     this.numBuffers = numbufs;
     this.replacerArg = replacerArg;
+    this.hashTable = new myHashTable();
+    this.fifoQueue = new LinkedList<>();
     
     //allocate new Page and FrameDesc objects for each index in the buffer pool
     for (int i = 0; i < numbufs; i++) {
@@ -61,6 +65,20 @@ public class BufMgr implements GlobalConst{
 
   public void pinPage(PageId pin_pgid, Page page, boolean emptyPage) {
     //YOUR CODE HERE
+    //call hash function to see if frame index exists (meaning page is in buffer pool)
+    int frameIndex = hashTable.getFrameNumber(pin_pgid);
+    //if page is in buffer pool, increment pin_count and return pointer to page
+    if (frameIndex != -1) {
+      frameDesc[frameIndex].setPinCount(frameDesc[frameIndex].getPinCount() + 1);
+      return;
+    } else {
+      //if page not in buffer pool, choose a frame to hold this page, read the page  (using the appropriate method from {diskmgr} package), and pin it
+      //find free frame 
+      //if no free frame, call FIFO replacer to find a frame to replace
+      
+
+    }
+    
 
   }
 
@@ -146,8 +164,6 @@ public class BufMgr implements GlobalConst{
    */
 
   public int getNumBuffers() {
-
-      //YOUR CODE HERE
   }
 
 
@@ -160,5 +176,18 @@ public class BufMgr implements GlobalConst{
     //YOUR CODE HERE
   }
 
+
+  //returns the index of oldest unpinned frame to replace using the FIFO replacement policy
+  private int getFrameToReplace() {
+    for (int entry: fifoQueue) {
+      if (frameDesc[entry].getPinCount() == 0) {
+        fifoQueue.remove(entry);
+        return entry;
+      }
+    }
+    //throw exception if no frame to replace
+    return -1;
+
+  }
 }
 
