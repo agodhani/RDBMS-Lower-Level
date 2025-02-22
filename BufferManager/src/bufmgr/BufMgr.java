@@ -19,10 +19,24 @@ public class BufMgr implements GlobalConst{
    * @param replacerArg name of the buffer replacement policy.
    */
 
-  public BufMgr(int numbufs, String replacerArg) {
+  private Page[] bufPool;
+  private FrameDesc[] frameDesc;
+  private int numBuffers;
+  private String replacerArg;  
 
-    //YOUR CODE HERE
-    //test test test
+  public BufMgr(int numbufs, String replacerArg) {
+    //initialize the buffer pool
+    this.bufPool = new Page[numbufs];
+    this.frameDesc = new FrameDesc[numbufs];
+    this.numBuffers = numbufs;
+    this.replacerArg = replacerArg;
+    
+    //allocate new Page and FrameDesc objects for each index in the buffer pool
+    for (int i = 0; i < numbufs; i++) {
+      this.bufPool[i] = new Page();
+      this.frameDesc[i] = new FrameDesc();
+    }
+    
 
   }
 
