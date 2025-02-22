@@ -1,11 +1,12 @@
 import java.util.LinkedList;
+import global.*;
 
-class myHashTable {
+public class myHashTable {
 
     private static final int HTSIZE = 101;
     private LinkedList<HashEntry>[] table;
 
-    private static class HashEntry {
+    private static class HashEntry() {
         PageId pageId;
         int frameNumber;
 
@@ -15,7 +16,7 @@ class myHashTable {
         }
     }
     
-    public myHashTable {
+    public myHashTable() {
         table = new LinkedList[HTSIZE];
         for (int i = 0; i < HTSIZE; i++) {
             table[i] = new LinkedList<>();
@@ -42,7 +43,7 @@ class myHashTable {
     public int getFrameNumber(PageId pageId) {
         int index = hash(pageId);
         for (HashEntry entry : table[index]) {
-            if (entry.pageId.pid = pageId.pid) {
+            if (entry.pageId.pid == pageId.pid) {
                 return entry.frameNumber;
             }
         }
@@ -60,14 +61,7 @@ class myHashTable {
     }
 
     public boolean contains(PageId page) {
-        return getFrameNumber != -1;
+        return getFrameNumber(page) != -1;
     }
-
-
-
-
-
-
-
 
 }
