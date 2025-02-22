@@ -153,7 +153,7 @@ public class BufMgr implements GlobalConst{
    */
 
   public void flushAllPages() {
-
+    
       //YOUR CODE HERE
   }
 
@@ -164,6 +164,7 @@ public class BufMgr implements GlobalConst{
    */
 
   public int getNumBuffers() {
+      return numBuffers;
   }
 
 
@@ -173,7 +174,22 @@ public class BufMgr implements GlobalConst{
    */
 
   public int getNumUnpinnedBuffers() {
-    //YOUR CODE HERE
+    int count = 0;
+    for (int i = 0; i < frameDesc.length; i++) {
+      if (frameDesc[i].getPinCount() == 0) {
+        count++;
+      }
+    }
+    return count; 
+  }
+
+  public int freeFrame() {
+    for (int i = 0; i < frameDesc.length; i++) {
+      if (frameDesc[i].getPageId().pid == -1) {
+        return i;
+      }
+    }
+    return -1;
   }
 
 
