@@ -61,57 +61,65 @@ public class BufMgr implements GlobalConst{
    * @param Page_Id_in_a_DB page number in the minibase.
    * @param page the pointer poit to the page.
    * @param emptyPage true (empty page); false (non-empty page)
-   */
-
-  public void pinPage(PageId pin_pgid, Page page, boolean emptyPage) {
+      * @throws BufferPoolExceededException 
+      */
+   
+     public void pinPage(PageId pin_pgid, Page page, boolean emptyPage) throws BufferPoolExceededException {
     //YOUR CODE HERE
     //call hash function to see if frame index exists (meaning page is in buffer pool)
-    int frameIndex = hashTable.getFrameNumber(pin_pgid);
-    //if page is in buffer pool, increment pin_count and return pointer to page
-    if (frameIndex != -1) {
-      frameDesc[frameIndex].setPinCount(frameDesc[frameIndex].getPinCount() + 1);
-      page.setpage(bufPool[frameIndex].getpage());
-      return;
-    } else {
-      //if page not in buffer pool, choose a frame to hold this page, 
-      //find free frame 
-      int freeFrame = freeFrame();
-      if(freeFrame == -1) {
-        //if no free frame, call FIFO replacer to find a frame to replace
-        freeFrame = getFrameToReplace();
-      }
-      //must write out the old page in chosen frame if it is dirty before reading new page. 
-      if(frameDesc[freeFrame].isDirty()) { //if the page is dirty, write it to disk
-        flushPage(frameDesc[freeFrame].getPageId());
-      }
-
-      //read the page  (using the appropriate method from {diskmgr} package)
-      if(!emptyPage) {
-        
-        DB db = new DB();
-        try{
-          db.read_page(pin_pgid, bufPool[freeFrame]);
+    try {
+      int frameIndex = hashTable.getFrameNumber(pin_pgid);
+      //if page is in buffer pool, increment pin_count and return pointer to page
+      if (frameIndex != -1) {
+        frameDesc[frameIndex].setPinCount(frameDesc[frameIndex].getPinCount() + 1);
+        page.setpage(bufPool[frameIndex].getpage());
+        return;
+      } else {
+        //if page not in buffer pool, choose a frame to hold this page, 
+        //find free frame 
+        int freeFrame = freeFrame();
+        if(freeFrame == -1) {
+          //if no free frame, call FIFO replacer to find a frame to replace
+          freeFrame = getFrameToReplace();
         }
-        catch(Exception e) { //fix throwing errors here
-          System.out.println("Error reading page from disk");
+
+        if (freeFrame == -1) {
+          throw new BufferPoolExceededException(null, "Buffer Manager: No free frames");
         }
-      }
+        //must write out the old page in chosen frame if it is dirty before reading new page. 
+        if(frameDesc[freeFrame].isDirty()) { //if the page is dirty, write it to disk
+          flushPage(frameDesc[freeFrame].getPageId());
+        }
 
-      //update file descriptor
-      frameDesc[freeFrame].setPageId(pin_pgid);
-      frameDesc[freeFrame].setPinCount(1);
-      frameDesc[freeFrame].setDirty(false);
+        //read the page  (using the appropriate method from {diskmgr} package)
+        if(!emptyPage) {
+          
+          DB db = new DB();
+          try{
+            db.read_page(pin_pgid, bufPool[freeFrame]);
+          }
+          catch(Exception e) { //fix throwing errors here
+            System.out.println("Error reading page from disk");
+          }
+        }
 
-      //update hash table
-      hashTable.insert(pin_pgid, freeFrame);
+        //update file descriptor
+        frameDesc[freeFrame].setPageId(pin_pgid);
+        frameDesc[freeFrame].setPinCount(1);
+        frameDesc[freeFrame].setDirty(false);
 
-      //update FIFO queue
-      fifoQueue.add(freeFrame);
+        //update hash table
+        hashTable.insert(pin_pgid, freeFrame);
 
-      //return pointer to page
-      page.setpage(bufPool[freeFrame].getpage());
+        //update FIFO queue
+        fifoQueue.add(freeFrame);
+
+        //return pointer to page
+        page.setpage(bufPool[freeFrame].getpage());
     }
-    
+    } catch (Exception e) {
+      throw new BufferPoolExceededException(e, "Buffer Manager: pinPage() failed.");
+    }
 
   }
 
@@ -311,6 +319,7 @@ public class BufMgr implements GlobalConst{
     }
     //throw exception if no frame to replace
     return -1;
+
 
   }
 }
