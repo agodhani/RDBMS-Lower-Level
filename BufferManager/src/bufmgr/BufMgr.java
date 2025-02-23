@@ -175,10 +175,11 @@ public class BufMgr implements GlobalConst{
     //Call DB object to allocate a run of new pages and find a frame in the buffer pool for the first page and pin it.
     
     DB db = new DB();
+    PageId firstpageID = new PageId();
     try {
-      //PageId pageId = new PageId();
-      db.allocate_page(firstpage, howmany); //firstpage needs to be PageID howwww to do thiss?????:
+      db.allocate_page(firstpageID, howmany); 
       //solution on piazza: You create a new PageId(), and pin it to firstpage still confused tho
+      pinPage(firstpageID, firstpage, false);
     } catch (Exception e) {
       //ask DB to deallocate all these pages, and return null.
       return null;
@@ -186,15 +187,32 @@ public class BufMgr implements GlobalConst{
     int freeIndex = freeFrame();
     if (freeIndex == -1) {
       //ask DB to deallocate all these pages, and return null.
-      db.deallocate_page(firstpage, howmany);
+      try {
+        db.deallocate_page(firstpageID, howmany);
+      } catch (Exception e) {
+        //throw Exception
+      }
       return null;
     }
     //TODO:
     //read page
+    try{
+      db.read_page(firstpageID, bufPool[freeIndex]);
+    }
+    catch(Exception e) { //fix throwing errors here
+      System.out.println("Error reading page from disk");
+    }
     //update file descriptor
+    frameDesc[freeIndex].setPageId(firstpageID);
+    frameDesc[freeIndex].setPinCount(1);
+    frameDesc[freeIndex].setDirty(false);
     //update hash table
+    hashTable.insert(firstpageID, freeIndex);
     //update FIFO queue
+    fifoQueue.add(freeIndex);
     //return pointer to page
+    firstpage.setpage(bufPool[freeIndex].getpage());
+    return firstpageID;
       
   }
 
