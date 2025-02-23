@@ -26,6 +26,11 @@ public class FrameDesc {
     public void setPageId(PageId pageId) {
         this.pageId= pageId;
     }
+    public void setPageId(int id) {
+        PageId pageId = new PageId();
+        pageId.pid = id;
+        this.pageId= pageId;
+    }
     public int getPinCount() {
         return pinCount;
     }
