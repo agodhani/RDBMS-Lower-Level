@@ -135,13 +135,15 @@ public class BufMgr implements GlobalConst{
    *
    * @param globalPageId_in_a_DB page number in the minibase.
    * @param dirty the dirty bit of the frame
-   */
-
-  public void unpinPage(PageId PageId_in_a_DB, boolean dirty) {
+      * @throws PageUnpinnedException 
+      */
+   
+     public void unpinPage(PageId PageId_in_a_DB, boolean dirty) throws PageUnpinnedException {
+    try {
 
     int frameIndex = hashTable.getFrameNumber(PageId_in_a_DB);
     if ((frameIndex == -1)){
-      //throw new PageUnpinnedException(null, "Page not in buffer pool");
+      throw new HashEntryNotFoundException(null, "Page not in buffer pool");
     }
 
     //If pin_count=0 before this call, throw an exception to report error.
@@ -150,7 +152,7 @@ public class BufMgr implements GlobalConst{
     if ( pinCount > 0) {
       frameDesc[frameIndex].setPinCount(pinCount - 1);
     } else {
-      //throw new PageUnpinnedException(null, "Pin count is already 0");
+      throw new PageUnpinnedException(null, "Pin count is already 0");
     }
     
     //This method should be called with dirty==true if the client has modified the page
@@ -160,6 +162,9 @@ public class BufMgr implements GlobalConst{
     } else {
       frameDesc[frameIndex].setDirty(false);
     }
+  } catch (Exception e) {
+    throw new PageUnpinnedException(e, "Buffer Manager: unpinPage() failed");
+  }
   }
 
 
@@ -231,30 +236,39 @@ public class BufMgr implements GlobalConst{
    * deallocate the page.
    *
    * @param globalPageId the page number in the data base.
-   */
-
-  public void freePage(PageId globalPageId) {
+      * @throws PagePinnedException 
+      */
+   
+     public void freePage(PageId globalPageId) throws PagePinnedException {
       //YOUR CODE HERE
-      int frameIndex = hashTable.getFrameNumber(globalPageId);
-      if (frameIndex != -1) {
-        if (frameDesc[frameIndex].getPinCount() > 0) {
-          //throw new PagePinnedException(null, "Page is pinned");
+      try {
+        int frameIndex = hashTable.getFrameNumber(globalPageId);
+        if (frameIndex != -1) {
+          if (frameDesc[frameIndex].getPinCount() > 0) {
+            throw new PagePinnedException(null, "Page is pinned");
+          }
+          //update hash table
+          hashTable.remove(globalPageId);
+          //update FIFO queue
+          fifoQueue.remove(frameIndex);
+          //update file descriptor
+          frameDesc[frameIndex].setPageId(-1);
+          frameDesc[frameIndex].setPinCount(0);
+          frameDesc[frameIndex].setDirty(false);
+          DB db = new DB();
+          try {
+            db.deallocate_page(globalPageId);
+          } catch (Exception e) {
+            throw new DiskMgrException(e, "Buffer Manager: dellocate failed"); 
+          }
+        } else {
+          throw new HashEntryNotFoundException(null, "Page not found in hash table");
         }
-        //update hash table
-        hashTable.remove(globalPageId);
-        //update FIFO queue
-        fifoQueue.remove(frameIndex);
-        //update file descriptor
-        frameDesc[frameIndex].setPageId(-1);
-        frameDesc[frameIndex].setPinCount(0);
-        frameDesc[frameIndex].setDirty(false);
-        DB db = new DB();
-        try {
-          db.deallocate_page(globalPageId);
-        } catch (Exception e) {
-          //throw Exception
-        }
+      } catch (Exception e) {
+        throw new PagePinnedException(e, "Buffer Manager: freePage() failed");
       }
+
+      
   }
 
 
@@ -263,16 +277,17 @@ public class BufMgr implements GlobalConst{
    * This method calls the write_page method of the diskmgr package.
    *
    * @param pageid the page number in the database.
-   */
-
-  public void flushPage(PageId pageid) {
+      * @throws DiskMgrException 
+      */
+   
+     public void flushPage(PageId pageid) throws DiskMgrException {
     int frameIndex = hashTable.getFrameNumber(pageid);
     if(frameIndex != -1 && frameDesc[frameIndex].isDirty()) {
       DB db = new DB();
       try {
         db.write_page(pageid, bufPool[frameIndex]);
       } catch (Exception e) {
-        //throw Exception
+        throw new DiskMgrException(null, "Buffer Mangager: write page failed");
       }
       frameDesc[frameIndex].setDirty(false);
     }
@@ -280,13 +295,19 @@ public class BufMgr implements GlobalConst{
   }
 
   /** Flushes all pages of the buffer pool to disk
-   */
+     * @throws DiskMgrException 
+     */
+  
+    public void flushAllPages() throws DiskMgrException {
 
-  public void flushAllPages() {
     for(int i = 0; i < this.numBuffers; i++) {
       int pageId = frameDesc[i].getPageId().pid;
       if(pageId != -1 &&frameDesc[i].isDirty()) {
-        flushPage(frameDesc[i].getPageId());
+        try {
+          flushPage(frameDesc[i].getPageId());
+        } catch (Exception e) {
+          throw new DiskMgrException(null, "Buffer Manager: flush page failed"); 
+        }
       }
     }
   }
