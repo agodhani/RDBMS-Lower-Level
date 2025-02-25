@@ -9,13 +9,13 @@ public class FrameDesc {
     //private String replacementPolicy;
 
     public FrameDesc() {
-        this.pageId.pid = -1;
+        this.pageId = new PageId(-1);
         this.pinCount = 0;
         this.dirty = false;
     }
     
     public FrameDesc(PageId pageId, int pinCount, boolean dirty) {
-        this.pageId.pid = pageId.pid;
+        this.pageId = pageId;
         this.pinCount = pinCount;
         this.dirty = dirty;
     }
