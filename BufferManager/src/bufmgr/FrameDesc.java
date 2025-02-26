@@ -49,5 +49,8 @@ public class FrameDesc {
     public boolean isReplacable() {
         return this.pinCount == 0;
     }
+    public String toString() {
+        return "PageId: " + this.pageId + ", PinCount: " + this.pinCount + ", Dirty: " + this.dirty;
+    }
 
 }

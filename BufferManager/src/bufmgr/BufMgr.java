@@ -94,7 +94,7 @@ public class BufMgr implements GlobalConst{
         //read the page  (using the appropriate method from {diskmgr} package)
         if(!emptyPage) {
           
-          DB db = new DB();
+          DB db = SystemDefs.JavabaseDB;
           try{
             db.read_page(pin_pgid, bufPool[freeFrame]);
           }
@@ -150,7 +150,7 @@ public class BufMgr implements GlobalConst{
     //Further, if pin_count>0, this method should decrement it.
     int pinCount = frameDesc[frameIndex].getPinCount();
     if ( pinCount > 0) {
-      frameDesc[frameIndex].setPinCount(pinCount - 1);
+      frameDesc[frameIndex].setPinCount(0);
     } else {
       throw new PageUnpinnedException(null, "Pin count is already 0");
     }
@@ -161,7 +161,7 @@ public class BufMgr implements GlobalConst{
       frameDesc[frameIndex].setDirty(true);
     } else {
       frameDesc[frameIndex].setDirty(false);
-    }
+    } 
   } catch (Exception e) {
     throw new PageUnpinnedException(e, "Buffer Manager: unpinPage() failed");
   }
@@ -187,7 +187,7 @@ public class BufMgr implements GlobalConst{
     //Allocate new pages.
     //Call DB object to allocate a run of new pages and find a frame in the buffer pool for the first page and pin it.
     
-    DB db = new DB();
+    DB db = SystemDefs.JavabaseDB;
     PageId firstpageID = new PageId();
     try {
       db.allocate_page(firstpageID, howmany); 
@@ -245,17 +245,18 @@ public class BufMgr implements GlobalConst{
         int frameIndex = hashTable.getFrameNumber(globalPageId);
         if (frameIndex != -1) {
           if (frameDesc[frameIndex].getPinCount() > 0) {
+            System.err.println(frameDesc[frameIndex].toString());
             throw new PagePinnedException(null, "Page is pinned");
           }
           //update hash table
           hashTable.remove(globalPageId);
           //update FIFO queue
-          fifoQueue.remove(frameIndex);
+          fifoQueue.remove((Integer)frameIndex);
           //update file descriptor
           frameDesc[frameIndex].setPageId(-1);
           frameDesc[frameIndex].setPinCount(0);
           frameDesc[frameIndex].setDirty(false);
-          DB db = new DB();
+          DB db = SystemDefs.JavabaseDB;
           try {
             db.deallocate_page(globalPageId);
           } catch (Exception e) {
@@ -283,7 +284,7 @@ public class BufMgr implements GlobalConst{
      public void flushPage(PageId pageid) throws DiskMgrException {
     int frameIndex = hashTable.getFrameNumber(pageid);
     if(frameIndex != -1 && frameDesc[frameIndex].isDirty()) {
-      DB db = new DB();
+      DB db = SystemDefs.JavabaseDB;
       try {
         db.write_page(pageid, bufPool[frameIndex]);
       } catch (Exception e) {
