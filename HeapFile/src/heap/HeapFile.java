@@ -1,7 +1,17 @@
 package heap;
 
 import global.GlobalConst;
+import global.Page;
+import global.PageId;
 import global.RID;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import bufmgr.*;
+import diskmgr.*;
+
+
 
 /**
  * <h3>Minibase Heap Files</h3>
@@ -13,13 +23,19 @@ import global.RID;
  */
 public class HeapFile implements GlobalConst {
 
+    private String fileName;
+    private List<HFPage> pages; // List of all HFPages in the heap file
+    private int recordCount;
   /**
    * If the given name already denotes a file, this opens it; otherwise, this
    * creates a new empty file. A null name produces a temporary heap file which
    * requires no DB entry.
    */
   public HeapFile(String name) {
-      //PUT YOUR CODE HERE
+      this.fileName = name;
+      this.pages = new ArrayList<>();
+      this.recordCount = 0;
+      
   }
 
   /**
@@ -28,6 +44,7 @@ public class HeapFile implements GlobalConst {
    */
   protected void finalize() throws Throwable {
       //PUT YOUR CODE HERE
+      super.finalize();
   }
 
   /**
@@ -35,6 +52,7 @@ public class HeapFile implements GlobalConst {
    */
   public void deleteFile() {
     //PUT YOUR CODE HERE
+    pages.clear();
   }
 
   /**
@@ -44,6 +62,16 @@ public class HeapFile implements GlobalConst {
    */
   public RID insertRecord(byte[] record) {
     //PUT YOUR CODE HERE
+    for (HFPage page : pages) {
+      if (page.getFreeSpace() > (short) record.length) {
+          return page.insertRecord(record);
+      }
+  }
+
+  // If no page has space, allocate a new page
+  HFPage newPage = new HFPage();
+  pages.add(newPage);
+  return newPage.insertRecord(record);
   }
 
   /**
