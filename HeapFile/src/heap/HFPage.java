@@ -8,6 +8,7 @@ package heap;
 import global.Page;
 import global.PageId;
 import global.RID;
+import global.GlobalConst;
 
 class HFPage extends Page {
     protected static final int SLOT_CNT = 0;
