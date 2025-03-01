@@ -1,4 +1,5 @@
 package bufmgr;
+import java.util.Iterator;
 import java.util.LinkedList;
 import global.*;
 
@@ -43,12 +44,16 @@ public class myHashTable {
 
     public void remove(PageId page) {
         int index = hash(page);
-        for (HashEntry entry : table[index]) {
+        Iterator<HashEntry> iterator = table[index].iterator();
+        while (iterator.hasNext()) {
+            HashEntry entry = iterator.next();
             if (entry.pageId.pid == page.pid) {
-                table[index].remove();
+                iterator.remove();
+                break; 
             }
         }
     }
+    
 
     public boolean contains(PageId page) {
         return getFrameNumber(page) != -1;
