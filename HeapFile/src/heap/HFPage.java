@@ -8,8 +8,6 @@ package heap;
 import global.Page;
 import global.PageId;
 import global.RID;
-import global.GlobalConst;
-import java.lang.*; 
 
 class HFPage extends Page {
     protected static final int SLOT_CNT = 0;
@@ -27,7 +25,7 @@ class HFPage extends Page {
     }
 
     public HFPage(Page page) {
-        super(page.getpage());
+        super(page.getData());
     }
 
     protected void initDefaults() {
@@ -79,7 +77,7 @@ class HFPage extends Page {
     public void setCurPage(PageId pageno) {
         this.setIntValue(pageno.pid, 16);
     }
-        
+
     public short getSlotLength(int slotno) {
         return this.getShortValue(20 + slotno * 4);
     }
@@ -174,9 +172,9 @@ class HFPage extends Page {
         n = 20 + rid.slotno * 4;
         this.setShortValue((short)-1, n);
         this.setShortValue((short)0, n + 2);
-            }
-        
-            public RID firstRecord() {
+    }
+
+    public RID firstRecord() {
         short slotCnt = this.getShortValue(0);
 
         int i;

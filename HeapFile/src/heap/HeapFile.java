@@ -81,7 +81,7 @@ public class HeapFile implements GlobalConst {
                      */
   public RID insertRecord(byte[] record) throws DiskMgrException, BufferPoolExceededException, PageUnpinnedException {
     //PUT YOUR CODE HERE
-    if (record.length > MINIBASE_PAGESIZE) {
+    if (record.length > PAGE_SIZE) {
       throw new IllegalArgumentException("Record size exceeds page size");
     }
   
@@ -218,7 +218,7 @@ public class HeapFile implements GlobalConst {
     // If no existing page has enough space, allocate a new one
     PageId newPageId = new PageId();
     try {
-        diskMgr.allocate_page(newPageId);
+        diskMgr.allocate_page();
     } catch (Exception e) {
         throw new DiskMgrException(e, "findPageForRecord() failed");
     }
