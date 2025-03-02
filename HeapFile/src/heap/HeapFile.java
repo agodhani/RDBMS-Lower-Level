@@ -7,9 +7,8 @@ import global.RID;
 import java.util.HashMap;
 
 import bufmgr.*;
-import diskmgr.DB;
-import diskmgr.DiskMgrException;
-
+import diskmgr.*;
+import global.*;
 
 
 
@@ -25,7 +24,7 @@ public class HeapFile implements GlobalConst {
 
     public String fileName;
     public BufMgr bufMgr;
-    public DB diskMgr;
+    public DiskMgr diskMgr;
     public HashMap<PageId, Integer> freeSpaceMap; 
     private int recordCount = 0;
 
@@ -37,8 +36,8 @@ public class HeapFile implements GlobalConst {
   public HeapFile(String name) {
       
     this.fileName = name;
-    this.bufMgr = new BufMgr(50, "FIFO");
-    this.diskMgr = new DB();
+    this.bufMgr = new BufMgr(50, 0);
+    this.diskMgr = new DiskMgr();
     this.freeSpaceMap = new HashMap<>();
   }
 
@@ -113,11 +112,11 @@ public class HeapFile implements GlobalConst {
   public Tuple getRecord(RID rid) throws BufferPoolExceededException, PageUnpinnedException {
     //PUT YOUR CODE HERE
     Page page = new Page();
-    bufMgr.pinPage(rid.pageNo, page, false);
+    bufMgr.pinPage(rid.pageno, page, false);
     HFPage hfPage = new HFPage(page);
     byte[] record = hfPage.selectRecord(rid);
     Tuple tuple = new Tuple(record, 0, record.length);
-    bufMgr.unpinPage(rid.pageNo, false);
+    bufMgr.unpinPage(rid.pageno, false);
 
     return tuple;
   }
@@ -135,11 +134,11 @@ public class HeapFile implements GlobalConst {
     byte[] newRecord = newTuple.getTupleByteArray();
 
     Page page = new Page();
-    bufMgr.pinPage(rid.pageNo, page, false);
+    bufMgr.pinPage(rid.pageno, page, false);
     HFPage hfPage = new HFPage(page);
 
     // Check length match
-    short oldLength = hfPage.getSlotLength(rid.slotNo);
+    short oldLength = hfPage.getSlotLength(rid.slotno);
     if (oldLength != (short)newRecord.length) {
         // The tests do expect an exception named "InvalidUpdateException"
         // if lengths differ. Let's do that to match test4() usage:
@@ -149,7 +148,7 @@ public class HeapFile implements GlobalConst {
     Tuple update = new Tuple(newRecord, 0, newRecord.length);
     hfPage.updateRecord(rid, update);
 
-    bufMgr.unpinPage(rid.pageNo, true);
+    bufMgr.unpinPage(rid.pageno, true);
     return true;
   
 
@@ -165,18 +164,18 @@ public class HeapFile implements GlobalConst {
   public boolean deleteRecord(RID rid) throws PageUnpinnedException, BufferPoolExceededException {
     //PUT YOUR CODE HERE
     Page page = new Page();
-    bufMgr.pinPage(rid.pageNo, page, false);
+    bufMgr.pinPage(rid.pageno, page, false);
     HFPage hfPage = new HFPage(page);
     try {
         hfPage.deleteRecord(rid);
     } catch (IllegalArgumentException e) {
-        bufMgr.unpinPage(rid.pageNo, false);
+        bufMgr.unpinPage(rid.pageno, false);
         return false;
     }
     // Update free space map and record count
-    freeSpaceMap.put(rid.pageNo, (int)hfPage.getFreeSpace());
+    freeSpaceMap.put(rid.pageno, (int)hfPage.getFreeSpace());
     recordCount--;
-    bufMgr.unpinPage(rid.pageNo, true);
+    bufMgr.unpinPage(rid.pageno, true);
     return true;
 
   }

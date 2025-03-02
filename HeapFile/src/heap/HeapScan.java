@@ -2,9 +2,7 @@ package heap;
 
 import java.util.*;
 
-import bufmgr.BufMgr;
-import bufmgr.BufferPoolExceededException;
-import bufmgr.PageUnpinnedException;
+import bufmgr.*;
 import global.* ;
 import chainexception.ChainException;
 
@@ -102,8 +100,8 @@ public class HeapScan implements GlobalConst {
     
     byte[] record = currentPage.selectRecord(currentRid);
     Tuple tuple = new Tuple(record, 0, record.length);
-    rid.pageNo = currentRid.pageNo;
-    rid.slotNo = currentRid.slotNo;
+    rid.pageno = currentRid.pageno;
+    rid.slotno = currentRid.slotno;
     
     // Move to the next record
     currentRid = currentPage.nextRecord(currentRid);
