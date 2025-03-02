@@ -7,6 +7,7 @@ import global.RID;
 import java.util.HashMap;
 
 import bufmgr.*;
+import chainexception.ChainException;
 import diskmgr.*;
 import global.*;
 
@@ -129,7 +130,7 @@ public class HeapFile implements GlobalConst {
                      * 
                      * @throws IllegalArgumentException if the rid or new record is invalid
                      */
-  public boolean updateRecord(RID rid, Tuple newTuple) throws BufferPoolExceededException, PageUnpinnedException, InvalidUpdateException {
+  public boolean updateRecord(RID rid, Tuple newTuple) throws ChainException{
     //PUT YOUR CODE HERE
     byte[] newRecord = newTuple.getTupleByteArray();
 
