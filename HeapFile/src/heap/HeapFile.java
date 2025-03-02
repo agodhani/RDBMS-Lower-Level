@@ -37,8 +37,8 @@ public class HeapFile implements GlobalConst {
   public HeapFile(String name) {
       
     this.fileName = name;
-    this.bufMgr = new BufMgr(50, 0);
-    this.diskMgr = new DiskMgr();
+    this.bufMgr = Minibase.BufferManager;
+    this.diskMgr = Minibase.DiskManager;
     this.freeSpaceMap = new HashMap<>();
   }
 
@@ -85,7 +85,7 @@ public class HeapFile implements GlobalConst {
     if (record.length > PAGE_SIZE) {
       throw new IllegalArgumentException("Record size exceeds page size");
     }
-  
+  System.err.println("Inserting record of size " + record.length);
   PageId targetPage = findPageForRecord(record.length);
   Page page = new Page();
   bufMgr.pinPage(targetPage, page, false);
@@ -101,6 +101,7 @@ public class HeapFile implements GlobalConst {
   freeSpaceMap.put(targetPage, (int) hfPage.getFreeSpace());
   recordCount++;
   bufMgr.unpinPage(targetPage, true);
+  System.err.println("Inserted record into page " + targetPage.pid + " at slot " + rid.slotno);
   return rid;
 }
 
@@ -143,6 +144,7 @@ public class HeapFile implements GlobalConst {
     if (oldLength != (short)newRecord.length) {
         // The tests do expect an exception named "InvalidUpdateException"
         // if lengths differ. Let's do that to match test4() usage:
+        //throw new InvalidUpdateException(null, "Invalid record size");
         return false;
     }
 
@@ -210,16 +212,19 @@ public class HeapFile implements GlobalConst {
   }
 
   private PageId findPageForRecord(int recordSize) throws DiskMgrException {
-  
+    System.err.println("Finding page for record of size " + recordSize);
+    System.err.println("Free space map: " + freeSpaceMap);
     for (PageId pid : freeSpaceMap.keySet()) {
+      System.err.println("Checking page " + pid.pid + " with " + freeSpaceMap.get(pid) + " free bytes");
         if (freeSpaceMap.get(pid) >= recordSize + 4) {
             return pid;
         }
     }
     // If no existing page has enough space, allocate a new one
-    PageId newPageId = new PageId();
+    System.err.println(diskMgr);
+    PageId newPageId;
     try {
-        diskMgr.allocate_page();
+      newPageId = diskMgr.allocate_page(recordSize);
     } catch (Exception e) {
         throw new DiskMgrException(e, "findPageForRecord() failed");
     }
@@ -235,6 +240,7 @@ public class HeapFile implements GlobalConst {
         // Update freeSpaceMap
         freeSpaceMap.put(newPageId, (int)hfPage.getFreeSpace());
         bufMgr.unpinPage(newPageId, true);
+        System.err.println("Allocated new page " + newPageId.pid+" for record" + recordSize);
     } catch (Exception e) {
         throw new DiskMgrException(e, "Error initializing new HFPage");
     }
