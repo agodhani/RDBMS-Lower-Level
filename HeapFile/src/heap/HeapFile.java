@@ -23,10 +23,11 @@ import diskmgr.DiskMgrException;
  */
 public class HeapFile implements GlobalConst {
 
-    private String fileName;
-    private BufMgr bufMgr;
-    private DB diskMgr;
-    private HashMap<PageId, Integer> freeSpaceMap; 
+    public String fileName;
+    public BufMgr bufMgr;
+    public DB diskMgr;
+    public HashMap<PageId, Integer> freeSpaceMap; 
+    private int recordCount = 0;
 
   /**
    * If the given name already denotes a file, this opens it; otherwise, this
@@ -34,8 +35,9 @@ public class HeapFile implements GlobalConst {
    * requires no DB entry.
    */
   public HeapFile(String name) {
+      
     this.fileName = name;
-    this.bufMgr = new BufMgr(50, "Buffer Manager");
+    this.bufMgr = new BufMgr(50, "FIFO");
     this.diskMgr = new DB();
     this.freeSpaceMap = new HashMap<>();
   }
@@ -46,7 +48,11 @@ public class HeapFile implements GlobalConst {
    */
   protected void finalize() throws Throwable {
       //PUT YOUR CODE HERE
-      deleteFile();
+    if (fileName == null) {
+        deleteFile();
+    }
+    super.finalize();
+
   }
 
   /**
@@ -63,6 +69,7 @@ public class HeapFile implements GlobalConst {
         }
       }
       freeSpaceMap.clear();
+      recordCount = 0;
     }
 
   /**
@@ -73,7 +80,7 @@ public class HeapFile implements GlobalConst {
                      * 
                      * @throws IllegalArgumentException if the record is too large
                      */
-                    public RID insertRecord(byte[] record) throws DiskMgrException, BufferPoolExceededException, PageUnpinnedException {
+  public RID insertRecord(byte[] record) throws DiskMgrException, BufferPoolExceededException, PageUnpinnedException {
     //PUT YOUR CODE HERE
     if (record.length > MINIBASE_PAGESIZE) {
       throw new IllegalArgumentException("Record size exceeds page size");
@@ -85,8 +92,14 @@ public class HeapFile implements GlobalConst {
   
   HFPage hfPage = new HFPage(page);
   RID rid = hfPage.insertRecord(record);
+
+  if (rid == null) {
+    bufMgr.unpinPage(targetPage, false);
+    throw new IllegalArgumentException("Not enough space to insert record");
+  }
   
   freeSpaceMap.put(targetPage, (int) hfPage.getFreeSpace());
+  recordCount++;
   bufMgr.unpinPage(targetPage, true);
   return rid;
 }
@@ -94,11 +107,10 @@ public class HeapFile implements GlobalConst {
   /**
    * Reads a record from the file, given its id.
       * @throws BufferPoolExceededException 
-         * @throws PageUnpinnedException 
-            * 
-            * @throws IllegalArgumentException if the rid is invalid
-            */
-           public byte[] selectRecord(RID rid) throws BufferPoolExceededException, PageUnpinnedException {
+      * @throws PageUnpinnedException 
+      * @throws IllegalArgumentException if the rid is invalid
+  */
+  public byte[] selectRecord(RID rid) throws BufferPoolExceededException, PageUnpinnedException {
     //PUT YOUR CODE HERE
     Page page = new Page();
     bufMgr.pinPage(rid.pageNo, page, false);
@@ -112,17 +124,30 @@ public class HeapFile implements GlobalConst {
    * Updates the specified record in the heap file.
       * @throws BufferPoolExceededException 
          * @throws PageUnpinnedException 
-            * 
-            * @throws IllegalArgumentException if the rid or new record is invalid
-            */
-           public void updateRecord(RID rid, byte[] newRecord) throws BufferPoolExceededException, PageUnpinnedException {
+            * @throws InvalidUpdateException 
+                     * 
+                     * @throws IllegalArgumentException if the rid or new record is invalid
+                     */
+           public void updateRecord(RID rid, byte[] newRecord) throws BufferPoolExceededException, PageUnpinnedException, InvalidUpdateException {
     //PUT YOUR CODE HERE
+
     Page page = new Page();
     bufMgr.pinPage(rid.pageNo, page, false);
     HFPage hfPage = new HFPage(page);
+
+    // Check length match
+    short oldLength = hfPage.getSlotLength(rid.slotNo);
+    if (oldLength != (short)newRecord.length) {
+        // The tests do expect an exception named "InvalidUpdateException"
+        // if lengths differ. Let's do that to match test4() usage:
+        throw new InvalidUpdateException(null, "Cannot change record size");
+    }
+
     Tuple update = new Tuple(newRecord, 0, newRecord.length);
     hfPage.updateRecord(rid, update);
+
     bufMgr.unpinPage(rid.pageNo, true);
+
   }
 
   /**
@@ -132,14 +157,22 @@ public class HeapFile implements GlobalConst {
             * 
             * @throws IllegalArgumentException if the rid is invalid
             */
-           public void deleteRecord(RID rid) throws PageUnpinnedException, BufferPoolExceededException {
+  public void deleteRecord(RID rid) throws PageUnpinnedException, BufferPoolExceededException {
     //PUT YOUR CODE HERE
     Page page = new Page();
     bufMgr.pinPage(rid.pageNo, page, false);
     HFPage hfPage = new HFPage(page);
-    hfPage.deleteRecord(rid);
+    try {
+        hfPage.deleteRecord(rid);
+    } catch (IllegalArgumentException e) {
+        bufMgr.unpinPage(rid.pageNo, false);
+        throw new IllegalArgumentException("Invalid RID in deleteRecord()");
+    }
+    // Update free space map and record count
     freeSpaceMap.put(rid.pageNo, (int)hfPage.getFreeSpace());
+    recordCount--;
     bufMgr.unpinPage(rid.pageNo, true);
+
   }
 
   /**
@@ -149,21 +182,15 @@ public class HeapFile implements GlobalConst {
             */
   public int getRecCnt() throws BufferPoolExceededException, PageUnpinnedException {
     //PUT YOUR CODE HERE
-    int count = 0;
-    for (PageId pid : freeSpaceMap.keySet()) {
-        Page page = new Page();
-        bufMgr.pinPage(pid, page, false);
-        HFPage hfPage = new HFPage(page);
-        count += hfPage.getSlotCount();
-        bufMgr.unpinPage(pid, false);
-    }
-    return count;
+    return recordCount;
   }
 
   /**
    * Initiates a sequential scan of the heap file.
-   */
-  public HeapScan openScan() {
+      * @throws PageUnpinnedException 
+      * @throws BufferPoolExceededException 
+      */
+  public HeapScan openScan() throws BufferPoolExceededException, PageUnpinnedException {
     return new HeapScan(this);
   }
 
@@ -172,23 +199,41 @@ public class HeapFile implements GlobalConst {
    */
   public String toString() {
     //PUT YOUR CODE HERE
-    return "HeapFile = " + fileName;
+    return "HeapFile(" + (fileName == null ? "temp" : fileName) + ")";
+
   }
 
   private PageId findPageForRecord(int recordSize) throws DiskMgrException {
+  
     for (PageId pid : freeSpaceMap.keySet()) {
-        if (freeSpaceMap.get(pid) >= recordSize) {
-            return pid; // Return existing page with enough free space
+        if (freeSpaceMap.get(pid) >= recordSize + 4) {
+            return pid;
         }
     }
     // If no existing page has enough space, allocate a new one
-    PageId newPageId = new PageId();  // Create a new PageId object
+    PageId newPageId = new PageId();
     try {
-    diskMgr.allocate_page(newPageId); // Pass it to allocate_page
+        diskMgr.allocate_page(newPageId);
     } catch (Exception e) {
-      throw new DiskMgrException(e, "findPageForRecord() failed");
+        throw new DiskMgrException(e, "findPageForRecord() failed");
     }
-    freeSpaceMap.put(newPageId, MINIBASE_PAGESIZE); // Initialize free space
+
+    // Initialize the new page as an HFPage
+    Page newPage = new Page();
+    try {
+        // Pin it as an empty page, then set up HFPage metadata
+        bufMgr.pinPage(newPageId, newPage, /*emptyPage*/ true);
+        HFPage hfPage = new HFPage(newPage);
+        hfPage.initDefaults(); 
+        hfPage.setCurPage(newPageId);
+        // Update freeSpaceMap
+        freeSpaceMap.put(newPageId, (int)hfPage.getFreeSpace());
+        bufMgr.unpinPage(newPageId, true);
+    } catch (Exception e) {
+        throw new DiskMgrException(e, "Error initializing new HFPage");
+    }
+
     return newPageId;
+
   }
 } // public class HeapFile implements GlobalConst

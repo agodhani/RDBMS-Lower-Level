@@ -26,8 +26,8 @@ public class Tuple{
 
 	public byte[] getTupleByteArray(){return data;}
 
-	public void updateByteArray(byte[] data, int length){
+	public void updateByteArray(byte[] data_update, int length){
 		tupleLength = length;
-		data = data;
+		data = data_update;
 	}
 }

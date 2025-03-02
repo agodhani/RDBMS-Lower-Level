@@ -1,6 +1,10 @@
 package heap;
 
 import java.util.*;
+
+import bufmgr.BufMgr;
+import bufmgr.BufferPoolExceededException;
+import bufmgr.PageUnpinnedException;
 import global.* ;
 import chainexception.ChainException;
 
@@ -10,15 +14,44 @@ import chainexception.ChainException;
  * the next record in the file.
  */
 public class HeapScan implements GlobalConst {
+   private HeapFile heapFile;
+    private BufMgr bufMgr;
+    private PageId currentPageId;
+    private HFPage currentPage;
+    private RID currentRid;
+    private boolean isScanOpen;
 
   /**
    * Constructs a file scan by pinning the directoy header page and initializing
    * iterator fields.
-   */
-  protected HeapScan(HeapFile hf) {
+      * @throws PageUnpinnedException 
+      * @throws BufferPoolExceededException 
+      */
+     protected HeapScan(HeapFile hf) throws BufferPoolExceededException, PageUnpinnedException {
     //PUT YOUR CODE HERE
+    this.heapFile = hf;
+    this.bufMgr = hf.bufMgr;
+    this.currentPageId = null;
+    this.currentPage = null;
+    this.currentRid = null;
+    this.isScanOpen = true;
+    moveToFirstRecord();
     
   }
+
+  private void moveToFirstRecord() throws BufferPoolExceededException, PageUnpinnedException {
+    for (PageId pid : heapFile.freeSpaceMap.keySet()) {
+        Page page = new Page();
+        bufMgr.pinPage(pid, page, false);
+        currentPage = new HFPage(page);
+        currentPageId = pid;
+        currentRid = currentPage.firstRecord();
+        if (currentRid != null) {
+            return;
+        }
+        bufMgr.unpinPage(pid, false);
+    }
+}
 
   /**
    * Called by the garbage collector when there are no more references to the
@@ -26,13 +59,22 @@ public class HeapScan implements GlobalConst {
    */
   protected void finalize() throws Throwable {
     //PUT YOUR CODE HERE
+    close();
   }
 
   /**
    * Closes the file scan, releasing any pinned pages.
-   */
-  public void close() {
+      * @throws PageUnpinnedException 
+      */
+     public void close() throws PageUnpinnedException {
     //PUT YOUR CODE HERE
+    if (isScanOpen) {
+      if (currentPageId != null) {
+          bufMgr.unpinPage(currentPageId, false);
+      }
+      isScanOpen = false;
+  }
+
   }
 
   /**
@@ -40,16 +82,44 @@ public class HeapScan implements GlobalConst {
    */
   public boolean hasNext() {
     //PUT YOUR CODE HERE
+    return isScanOpen && currentRid != null;
   }
 
   /**
    * Gets the next record in the file scan.
    * 
    * @param rid output parameter that identifies the returned record
-   * @throws IllegalStateException if the scan has no more elements
-   */
-  public byte[] getNext(RID rid) {
+      * @throws PageUnpinnedException 
+         * @throws BufferPoolExceededException 
+            * @throws IllegalStateException if the scan has no more elements
+            */
+           public byte[] getNext(RID rid) throws PageUnpinnedException, BufferPoolExceededException {
     //PUT YOUR CODE HERE
+    if (!hasNext()) {
+      throw new IllegalStateException("No more records");
+  }
+  
+  byte[] record = currentPage.selectRecord(currentRid);
+  rid.pageNo = currentRid.pageNo;
+  rid.slotNo = currentRid.slotNo;
+  
+  // Move to the next record
+  currentRid = currentPage.nextRecord(currentRid);
+  
+  while (currentRid == null) {
+      bufMgr.unpinPage(currentPageId, false);
+      currentPageId = currentPage.getNextPage();
+      if (currentPageId.pid == -1) {
+          currentPage = null;
+          return record;
+      }
+      Page nextPage = new Page();
+      bufMgr.pinPage(currentPageId, nextPage, false);
+      currentPage = new HFPage(nextPage);
+      currentRid = currentPage.firstRecord();
+  }
+  
+  return record;
   }
 
 } // public class HeapScan implements GlobalConst
