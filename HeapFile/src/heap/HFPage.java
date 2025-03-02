@@ -128,7 +128,7 @@ class HFPage extends Page {
 
     public byte[] selectRecord(RID rid) {
         short length = this.checkRID(rid);
-        short offset = this.getSlotOffset(rid.slotNo);
+        short offset = this.getSlotOffset(rid.slotno);
         byte[] record = new byte[length];
         System.arraycopy(this.data, offset, record, 0, length);
         return record;
@@ -139,14 +139,14 @@ class HFPage extends Page {
         if (record.getLength() != length) {
             throw new IllegalArgumentException("Invalid record size");
         } else {
-            short offset = this.getSlotOffset(rid.slotNo);
+            short offset = this.getSlotOffset(rid.slotno);
             System.arraycopy(record.data, 0, this.data, offset, length);
         }
     }
 
     public void deleteRecord(RID rid) {
         short length = this.checkRID(rid);
-        short offset = this.getSlotOffset(rid.slotNo);
+        short offset = this.getSlotOffset(rid.slotno);
         short usedPtr = this.getShortValue(2);
         short newSpot = (short)(usedPtr + length);
         short size = (short)(offset - usedPtr);
@@ -171,7 +171,7 @@ class HFPage extends Page {
         short freeSpace = this.getShortValue(4);
         freeSpace += length;
         this.setShortValue(freeSpace, 4);
-        n = 20 + rid.slotNo * 4;
+        n = 20 + rid.slotno * 4;
         this.setShortValue((short)-1, n);
         this.setShortValue((short)0, n + 2);
             }
@@ -193,9 +193,9 @@ class HFPage extends Page {
     public boolean hasNext(RID curRid) {
         int curPid = this.getIntValue(16);
         short slotCnt = this.getShortValue(0);
-        if (curRid.pageNo.pid == curPid && curRid.slotNo >= 0 && curRid.slotNo <= slotCnt) {
+        if (curRid.pageno.pid == curPid && curRid.slotno >= 0 && curRid.slotno <= slotCnt) {
             int i;
-            for(i = curRid.slotNo + 1; i < slotCnt; ++i) {
+            for(i = curRid.slotno + 1; i < slotCnt; ++i) {
                 short length = this.getSlotLength(i);
                 if (length != -1) {
                     break;
@@ -211,9 +211,9 @@ class HFPage extends Page {
     public RID nextRecord(RID curRid) {
         int curPid = this.getIntValue(16);
         short slotCnt = this.getShortValue(0);
-        if (curRid.pageNo.pid == curPid && curRid.slotNo >= 0 && curRid.slotNo <= slotCnt) {
+        if (curRid.pageno.pid == curPid && curRid.slotno >= 0 && curRid.slotno <= slotCnt) {
             int i;
-            for(i = curRid.slotNo + 1; i < slotCnt; ++i) {
+            for(i = curRid.slotno + 1; i < slotCnt; ++i) {
                 short length = this.getSlotLength(i);
                 if (length != -1) {
                     break;
@@ -251,8 +251,8 @@ class HFPage extends Page {
     protected short checkRID(RID rid) {
         int curPid = this.getIntValue(16);
         short slotCnt = this.getShortValue(0);
-        if (rid.pageNo.pid == curPid && rid.slotNo >= 0 && rid.slotNo <= slotCnt) {
-            short recLen = this.getSlotLength(rid.slotNo);
+        if (rid.pageno.pid == curPid && rid.slotno >= 0 && rid.slotno <= slotCnt) {
+            short recLen = this.getSlotLength(rid.slotno);
             if (recLen == -1) {
                 throw new IllegalArgumentException("Empty slot");
             } else {
