@@ -262,26 +262,4 @@ class HFPage extends Page {
             throw new IllegalArgumentException("Invalid RID");
         }
     }
-                
-    private int getIntValue(int i) {
-        return ((data[i] & 0xFF) << 24) | 
-        ((data[i + 1] & 0xFF) << 16) | 
-        ((data[i + 2] & 0xFF) << 8) | 
-        (data[i + 3] & 0xFF);
-    }
-        
-    private short getShortValue(int i) {
-        return (short) (((data[i] & 0xFF) << 8) | (data[i + 1] & 0xFF));
-    }
-
-    private void setShortValue(short s, int i) {
-        data[i] = (byte) ((s >> 8) & 0xFF);
-        data[i + 1] = (byte) (s & 0xFF);
-    }
-    private void setIntValue(int pid, int i) {
-        data[i] = (byte) ((pid >> 24) & 0xFF);
-        data[i + 1] = (byte) ((pid >> 16) & 0xFF);
-        data[i + 2] = (byte) ((pid >> 8) & 0xFF);
-        data[i + 3] = (byte) (pid & 0xFF);
-    }
 }
