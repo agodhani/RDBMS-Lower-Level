@@ -5,15 +5,15 @@ import chainexception.ChainException;
 public class Tuple{
 	
 	/*FIXME this shouldn't be an arbitrary number*/
-	public static final int max = 1024;
+	public static final int MAX_TUPSIZE = 1024;
 
 	public byte[] data;
 	public int tupleLength;
 
 	//initialize a blank tuple
 	public Tuple(){
-		data = new byte[max];
-		tupleLength = max;
+		data = new byte[MAX_TUPSIZE];
+		tupleLength = MAX_TUPSIZE;
 	}
 
 	//init a tuple with fields

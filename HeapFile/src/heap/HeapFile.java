@@ -110,14 +110,16 @@ public class HeapFile implements GlobalConst {
       * @throws PageUnpinnedException 
       * @throws IllegalArgumentException if the rid is invalid
   */
-  public byte[] selectRecord(RID rid) throws BufferPoolExceededException, PageUnpinnedException {
+  public Tuple getRecord(RID rid) throws BufferPoolExceededException, PageUnpinnedException {
     //PUT YOUR CODE HERE
     Page page = new Page();
     bufMgr.pinPage(rid.pageNo, page, false);
     HFPage hfPage = new HFPage(page);
     byte[] record = hfPage.selectRecord(rid);
+    Tuple tuple = new Tuple(record, 0, record.length);
     bufMgr.unpinPage(rid.pageNo, false);
-    return record;
+
+    return tuple;
   }
 
   /**
@@ -128,8 +130,9 @@ public class HeapFile implements GlobalConst {
                      * 
                      * @throws IllegalArgumentException if the rid or new record is invalid
                      */
-           public void updateRecord(RID rid, byte[] newRecord) throws BufferPoolExceededException, PageUnpinnedException, InvalidUpdateException {
+  public boolean updateRecord(RID rid, Tuple newTuple) throws BufferPoolExceededException, PageUnpinnedException, InvalidUpdateException {
     //PUT YOUR CODE HERE
+    byte[] newRecord = newTuple.getTupleByteArray();
 
     Page page = new Page();
     bufMgr.pinPage(rid.pageNo, page, false);
@@ -140,13 +143,15 @@ public class HeapFile implements GlobalConst {
     if (oldLength != (short)newRecord.length) {
         // The tests do expect an exception named "InvalidUpdateException"
         // if lengths differ. Let's do that to match test4() usage:
-        throw new InvalidUpdateException(null, "Cannot change record size");
+        return false;
     }
 
     Tuple update = new Tuple(newRecord, 0, newRecord.length);
     hfPage.updateRecord(rid, update);
 
     bufMgr.unpinPage(rid.pageNo, true);
+    return true;
+  
 
   }
 
@@ -157,7 +162,7 @@ public class HeapFile implements GlobalConst {
             * 
             * @throws IllegalArgumentException if the rid is invalid
             */
-  public void deleteRecord(RID rid) throws PageUnpinnedException, BufferPoolExceededException {
+  public boolean deleteRecord(RID rid) throws PageUnpinnedException, BufferPoolExceededException {
     //PUT YOUR CODE HERE
     Page page = new Page();
     bufMgr.pinPage(rid.pageNo, page, false);
@@ -166,12 +171,13 @@ public class HeapFile implements GlobalConst {
         hfPage.deleteRecord(rid);
     } catch (IllegalArgumentException e) {
         bufMgr.unpinPage(rid.pageNo, false);
-        throw new IllegalArgumentException("Invalid RID in deleteRecord()");
+        return false;
     }
     // Update free space map and record count
     freeSpaceMap.put(rid.pageNo, (int)hfPage.getFreeSpace());
     recordCount--;
     bufMgr.unpinPage(rid.pageNo, true);
+    return true;
 
   }
 
