@@ -95,7 +95,8 @@ public class HeapScan implements GlobalConst {
 
     //PUT YOUR CODE HERE
     if (!hasNext()) {
-        throw new IllegalStateException("No more records");
+        //throw new IllegalStateException("No more records");
+        return null;
     }
     
     byte[] record = currentPage.selectRecord(currentRid);
