@@ -140,10 +140,14 @@ public class HeapFile implements GlobalConst {
 
     // Check length match
     short oldLength = hfPage.getSlotLength(rid.slotno);
-    if (oldLength != (short)newRecord.length) {
-        //throw new InvalidUpdateException(null, "Invalid record size");
-        return false;
+    try {
+      if (oldLength != (short)newRecord.length) {
+        throw new InvalidUpdateException(null, "Invalid record size");
+      }
+    } catch (InvalidUpdateException e) {
+      return false;
     }
+    
 
     Tuple update = new Tuple(newRecord, 0, newRecord.length);
     hfPage.updateRecord(rid, update);

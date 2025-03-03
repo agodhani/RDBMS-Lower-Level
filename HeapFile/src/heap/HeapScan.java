@@ -33,28 +33,32 @@ public class HeapScan implements GlobalConst {
     this.currentPage = null;
     this.currentRid = null;
     this.isScanOpen = true;
-    //moveToFirstRecord();
-    currentPageId = heapFile.headerPageId;
-    if(currentPageId != null && currentPageId.pid != -1) {
-        Page page = new Page();
-        bufMgr.pinPage(currentPageId, page, false);
-        currentPage = new HFPage(page);
-        currentRid = currentPage.firstRecord();
-    }
+    
+    moveToFirstRecord();
+
   }
 
   private void moveToFirstRecord() throws BufferPoolExceededException, PageUnpinnedException {
+    System.err.println("Moving to first record"
+    );
     for (PageId pid : heapFile.freeSpaceMap.keySet()) {
         Page page = new Page();
         bufMgr.pinPage(pid, page, false);
-        currentPage = new HFPage(page);
-        currentPageId = pid;
-        currentRid = currentPage.firstRecord();
-        if (currentRid != null) {
-            return;
+        HFPage currPage = new HFPage(page);
+        RID rid  = currPage.firstRecord();
+        if (rid != null) {
+          this.currentPage = currPage;
+          this.currentPageId = pid;
+          this.currentRid = rid;
+          
+          return;
         }
         bufMgr.unpinPage(pid, false);
     }
+    System.err.println("No first records found");
+    this.currentPage = null;
+    this.currentPageId = null;
+    this.currentRid = null;
 }
 
   /**
@@ -102,12 +106,14 @@ public class HeapScan implements GlobalConst {
             * @throws IllegalStateException if the scan has no more elements
             */
   public Tuple getNext(RID rid) throws PageUnpinnedException, BufferPoolExceededException {
+    System.err.println("Getting next record");
     if (!isScanOpen) {
+        System.err.println("Scan is closed");
         //throw new IllegalStateException("No more records");
         return null;
     }
-
     while (currentPage != null &&currentRid == null) {
+      System.err.println("Moving to next page");
       bufMgr.unpinPage(currentPageId, false);
 
       PageId nextPageId = currentPage.getNextPage();
@@ -128,6 +134,7 @@ public class HeapScan implements GlobalConst {
         currentRid = currentPage.firstRecord();
       }
     }
+    
     if (currentRid == null || currentPage == null) {
       return null;
     }
