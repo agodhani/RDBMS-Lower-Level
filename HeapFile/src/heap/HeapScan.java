@@ -29,7 +29,8 @@ public class HeapScan implements GlobalConst {
     //PUT YOUR CODE HERE
     this.heapFile = hf;
     this.bufMgr = hf.bufMgr;
-    this.currentPageId = null;
+    //prob need to conditionally set this as null if headerPageId is null
+    this.currentPageId = hf.headerPageId;
     this.currentPage = null;
     this.currentRid = null;
     this.isScanOpen = true;
@@ -106,14 +107,14 @@ public class HeapScan implements GlobalConst {
             * @throws IllegalStateException if the scan has no more elements
             */
   public Tuple getNext(RID rid) throws PageUnpinnedException, BufferPoolExceededException {
-    System.err.println("Getting next record");
+    //System.err.println("Getting next record");
     if (!isScanOpen) {
-        System.err.println("Scan is closed");
+        //System.err.println("Scan is closed");
         //throw new IllegalStateException("No more records");
         return null;
     }
     while (currentPage != null &&currentRid == null) {
-      System.err.println("Moving to next page");
+      //System.err.println("Moving to next page");
       bufMgr.unpinPage(currentPageId, false);
 
       PageId nextPageId = currentPage.getNextPage();
@@ -136,7 +137,7 @@ public class HeapScan implements GlobalConst {
     }
     
     if (currentRid == null || currentPage == null) {
-      return null;
+      return null; // this is where it is returning null
     }
 
     

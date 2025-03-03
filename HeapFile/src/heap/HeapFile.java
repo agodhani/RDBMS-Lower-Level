@@ -39,7 +39,19 @@ public class HeapFile implements GlobalConst {
     this.diskMgr = Minibase.DiskManager;
     this.freeSpaceMap = new HashMap<>();
     this.headerPageId = null;
-  }
+    PageId existingId = diskMgr.get_file_entry(name);
+    System.err.println("Existing ID: " + existingId);
+    if (existingId != null) {
+        this.headerPageId = existingId;    
+    }
+    else {
+        PageId firstDataPageId = diskMgr.allocate_page(); 
+        this.headerPageId = firstDataPageId;
+        this.lastPageId = firstDataPageId;
+        diskMgr.add_file_entry(name, headerPageId);
+        System.err.println("Created new file with header page " + headerPageId.pid);
+}
+}
 
   /**
    * Called by the garbage collector when there are no more references to the
