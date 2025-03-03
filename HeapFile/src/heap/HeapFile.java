@@ -141,8 +141,6 @@ public class HeapFile implements GlobalConst {
     // Check length match
     short oldLength = hfPage.getSlotLength(rid.slotno);
     if (oldLength != (short)newRecord.length) {
-        // The tests do expect an exception named "InvalidUpdateException"
-        // if lengths differ. Let's do that to match test4() usage:
         //throw new InvalidUpdateException(null, "Invalid record size");
         return false;
     }
@@ -236,8 +234,8 @@ public class HeapFile implements GlobalConst {
         HFPage hfPage = new HFPage(newPage);
         hfPage.initDefaults(); 
         hfPage.setCurPage(newPageId);
-        hfPage.setNextPage(new PageId());
-        hfPage.setPrevPage(new PageId());
+        hfPage.setNextPage(new PageId(-1));
+        hfPage.setPrevPage(new PageId(-1));
         if (this.lastPageId == null) {
             this.headerPageId = newPageId;
             this.lastPageId = newPageId;
