@@ -1,9 +1,5 @@
 package heap;
 
-import global.GlobalConst;
-import global.Page;
-import global.PageId;
-import global.RID;
 import java.util.HashMap;
 
 import bufmgr.*;
@@ -28,6 +24,8 @@ public class HeapFile implements GlobalConst {
     public DiskMgr diskMgr;
     public HashMap<PageId, Integer> freeSpaceMap; 
     private int recordCount = 0;
+    public PageId headerPageId;
+    public PageId lastPageId;
 
   /**
    * If the given name already denotes a file, this opens it; otherwise, this
@@ -40,6 +38,7 @@ public class HeapFile implements GlobalConst {
     this.bufMgr = Minibase.BufferManager;
     this.diskMgr = Minibase.DiskManager;
     this.freeSpaceMap = new HashMap<>();
+    this.headerPageId = null;
   }
 
   /**
@@ -224,7 +223,7 @@ public class HeapFile implements GlobalConst {
     //System.err.println(diskMgr);
     PageId newPageId;
     try {
-      newPageId = diskMgr.allocate_page(recordSize);
+      newPageId = diskMgr.allocate_page(1);
     } catch (Exception e) {
         throw new DiskMgrException(e, "findPageForRecord() failed");
     }
@@ -237,6 +236,23 @@ public class HeapFile implements GlobalConst {
         HFPage hfPage = new HFPage(newPage);
         hfPage.initDefaults(); 
         hfPage.setCurPage(newPageId);
+        hfPage.setNextPage(new PageId());
+        hfPage.setPrevPage(new PageId());
+        if (this.lastPageId == null) {
+            this.headerPageId = newPageId;
+            this.lastPageId = newPageId;
+        } else {
+            Page curLastPage = new Page();
+            
+            bufMgr.pinPage(this.lastPageId, curLastPage, false);
+            HFPage curLastHFPage = new HFPage(curLastPage);
+            curLastHFPage.setNextPage(newPageId);
+            bufMgr.unpinPage(this.lastPageId, true);
+
+            hfPage.setPrevPage(this.lastPageId);
+            this.lastPageId = newPageId;
+        }
+       
         // Update freeSpaceMap
         freeSpaceMap.put(newPageId, (int)hfPage.getFreeSpace());
         bufMgr.unpinPage(newPageId, true);

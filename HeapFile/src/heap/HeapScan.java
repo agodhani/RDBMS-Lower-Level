@@ -33,8 +33,14 @@ public class HeapScan implements GlobalConst {
     this.currentPage = null;
     this.currentRid = null;
     this.isScanOpen = true;
-    moveToFirstRecord();
-    
+    //moveToFirstRecord();
+    currentPageId = heapFile.headerPageId;
+    if(currentPageId != null && currentPageId.pid != -1) {
+        Page page = new Page();
+        bufMgr.pinPage(currentPageId, page, false);
+        currentPage = new HFPage(page);
+        currentRid = currentPage.firstRecord();
+    }
   }
 
   private void moveToFirstRecord() throws BufferPoolExceededException, PageUnpinnedException {
@@ -71,6 +77,10 @@ public class HeapScan implements GlobalConst {
           bufMgr.unpinPage(currentPageId, false);
       }
       isScanOpen = false;
+      currentPage = null;
+      currentPageId = null;
+      currentRid = null;
+      isScanOpen = false;
   }
 
   }
@@ -80,7 +90,7 @@ public class HeapScan implements GlobalConst {
    */
   public boolean hasNext() {
     //PUT YOUR CODE HERE
-    return isScanOpen && currentRid != null;
+    return isScanOpen && currentRid != null &&currentPage != null;
   }
 
   /**
@@ -109,15 +119,23 @@ public class HeapScan implements GlobalConst {
     
     while (currentRid == null) {
         bufMgr.unpinPage(currentPageId, false);
-        currentPageId = currentPage.getNextPage();
-        if (currentPageId.pid == -1) {
-            currentPage = null;   
-            return tuple;
+
+        PageId nextPageId = currentPage.getNextPage();
+        //currentPageId = nextPageId;
+        
+        if (nextPageId.pid == -1) {
+            currentPage = null; 
+            currentPageId = new PageId();  
+            return null;
+            
+        } else {
+          Page nextPage = new Page();
+          currentPageId = nextPageId;
+          bufMgr.pinPage(currentPageId, nextPage, false);
+
+          currentPage = new HFPage(nextPage);
+          currentRid = currentPage.firstRecord();
         }
-        Page nextPage = new Page();
-        bufMgr.pinPage(currentPageId, nextPage, false);
-        currentPage = new HFPage(nextPage);
-        currentRid = currentPage.firstRecord();
     }
     return tuple;
   }
